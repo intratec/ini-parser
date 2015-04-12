@@ -6,6 +6,24 @@ using IniParser.Model.Configuration;
 
 namespace IniParser.Parser
 {
+
+    public class SpecialIniDataParser : IniDataParser
+    {
+        string ConcatenateSeparator {get; private set;}
+        public SpecialIniDataParser(IIniParserConfiguration parserConfiguration, string concatenateSeparator = ";")
+        {
+            if (parserConfiguration == null)
+                throw new ArgumentNullException("parserConfiguration");
+
+            ConcatenateSeparator = concatenateSeparator;
+            Configuration = parserConfiguration;
+        }
+
+        protected override void HandleDuplicatedKeyInCollection(string key, string value, KeyDataCollection keyDataCollection, string sectionName)
+        {
+            keyDataCollection[key] += ConcatenateSeparator + value;
+        }
+    }
 	/// <summary>
 	/// 	Responsible for parsing an string from an ini file, and creating
 	/// 	an <see cref="IniData"/> structure.
@@ -345,6 +363,24 @@ namespace IniParser.Parser
             return s.Substring(index + 1, s.Length - index - 1).Trim();
         }
 
+        /// <summary>
+        ///     Abstract Method that decides what to do in case we are trying to add a duplicated key to a section
+        /// </summary>
+        protected virtual void HandleDuplicatedKeyInCollection(string key, string value, KeyDataCollection keyDataCollection, string sectionName)
+        {
+            if (!Configuration.AllowDuplicateKeys)
+            {
+                throw new ParsingException(string.Format("Duplicated key '{0}' found in section '{1}", key, sectionName));
+            }
+            else if(Configuration.OverrideDuplicateKeys)
+            {
+                keyDataCollection[key] = value;
+            }
+            else if (Configuration.ConcatenateDuplicateKeys)
+            {
+                keyDataCollection[key] += Configuration.ConcatenateSeparator + value;
+            }
+        }
         #endregion
 
         #region Helpers
@@ -371,19 +407,7 @@ namespace IniParser.Parser
             if (keyDataCollection.ContainsKey(key))
             {
                 // We already have a key with the same name defined in the current section
-
-                if (!Configuration.AllowDuplicateKeys)
-                {
-                    throw new ParsingException(string.Format("Duplicated key '{0}' found in section '{1}", key, sectionName));
-                }
-                else if(Configuration.OverrideDuplicateKeys)
-                {
-                    keyDataCollection[key] = value;
-                }
-                else if (Configuration.ConcatenateDuplicateKeys)
-                {
-                    keyDataCollection[key] += Configuration.ConcatenateSeparator + value;
-                }
+                HandleDuplicatedKeyInCollection(key, value, keyDataCollection, sectionName);
             }
             else
             {
