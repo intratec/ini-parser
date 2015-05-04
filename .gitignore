@@ -122,3 +122,4 @@ UpgradeLog*.XML
 *.resources
 test-results/
 >>>>>>> Stashed changes
+lib/INIFileParser.xml
